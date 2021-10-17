@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- <link rel="icon" type="image/x-icon" href="https://openlayers.org/favicon.ico" /> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visitigon</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="panel">
+        <div class="heading">
+          Visitigon
+        </div>
+        <div class="input-group">
+          <input type="search" id="place-search" placeholder="Add Places..">
+          <button class="btn" id="add-place-btn"> Add</button>
+        </div>
+        <div id="search-results"></div>
+        <div id="message">
+          Enter a place and press Add.
+        </div>
+        <!-- <button>Download your Visitigon</button> -->
+      </div>
+      <div id="bounds">
+        <div class="bound bound-north">
+          <div class="direction-name">North</div>
+          <div class="place place-north">&nbsp;</div>
+        </div>
+        <div class="bound bound-west">
+          <div class="direction-name">West</div>
+          <div class="place place-west">&nbsp;</div>
+        </div>
+        <div class="bound bound-east">
+          <div class="direction-name">East</div>
+          <div class="place place-east">&nbsp;</div>
+        </div>
+        <div class="bound bound-south">
+          <div class="direction-name">South</div>
+          <div class="place place-south">&nbsp;</div>
+        </div>
+      </div>
+      <div id="map"></div>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
