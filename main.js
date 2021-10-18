@@ -7,6 +7,7 @@ import {OSM, Vector as VectorSource} from 'ol/source';
 import {Style, Fill} from 'ol/style';
 import {Tile as TileLayer, Vector as VectorLayer} from 'ol/layer';
 import {useGeographic, transform} from 'ol/proj';
+import ConvexHullGrahamScan from 'graham_scan';
 
 // useGeographic();
 
@@ -38,21 +39,41 @@ function createCircleFeature(coord) {
 function createVisitigon(placeCos) {
   console.log("adding visitigon")
   let allPlaceCoords = placeCos.map(convertCoords)
+  let polygonCoords
 
-  let xCoords = allPlaceCoords.map(coord => coord[0])
-  let yCoords = allPlaceCoords.map(coord => coord[1])
+  // For polygon
+  if (false) {
+    //Create a new instance of ConvexHullGrahamScan.
+    var convexHull = new ConvexHullGrahamScan();
+    
+    //add points using for loop on your coordinates
+    for (var i = 0; i < allPlaceCoords.length ; i++) {
+        // add your coordinates
+        convexHull.addPoint(allPlaceCoords[i][0], allPlaceCoords[i][1]); 
+    }
+    
+    // get point array from convex hull
+    var hullPoints = convexHull.getHull();
+    polygonCoords = hullPoints.map(pt => [pt.x, pt.y])
+  }
 
-  let minXCo = Math.min(...xCoords)
-  let maxXCo = Math.max(...xCoords)
-  let minYCo = Math.min(...yCoords)
-  let maxYCo = Math.max(...yCoords)
-
-  let polygonCoords = [
-    [minXCo, maxYCo],
-    [maxXCo, maxYCo],
-    [maxXCo, minYCo],
-    [minXCo, minYCo]
-  ]
+  // For bounding rectangle
+  else {
+    let xCoords = allPlaceCoords.map(coord => coord[0])
+    let yCoords = allPlaceCoords.map(coord => coord[1])
+  
+    let minXCo = Math.min(...xCoords)
+    let maxXCo = Math.max(...xCoords)
+    let minYCo = Math.min(...yCoords)
+    let maxYCo = Math.max(...yCoords)
+  
+    polygonCoords = [
+      [minXCo, maxYCo],
+      [maxXCo, maxYCo],
+      [maxXCo, minYCo],
+      [minXCo, minYCo]
+    ]
+  }
 
   let polyFeature = new Feature({
     geometry: new Polygon([polygonCoords])
@@ -120,6 +141,7 @@ async function searchOSM(searchText) {
   toggleLoader(true)
   let endpoint = 'https://nominatim.openstreetmap.org/search'
   let url = endpoint + `/${searchText}?format=json`
+  url = encodeURI(url)
   try {
     let resp = await fetch(url)
     let data = await resp.json()
@@ -136,7 +158,7 @@ async function searchOSM(searchText) {
 
 let boundPlaces = {}
 let allPlaces = []
-let visitigonList = []
+let visitigonDict = {}
 let commonWord
 
 function commonWords (first, second) {
@@ -270,21 +292,7 @@ async function addPlace() {
     let boundsBreached = checkBoundPlaces(place)
     
     let extentOptions = {}
-    if (boundsBreached) {
-      let visitigon = createVisitigon(allPlaces)
-      if (visitigonList.length) {
-        vecSource.removeFeature(visitigonList[0])
-        visitigonList = []
-      }
-      visitigonList.push(visitigon)
-      vecSource.addFeature(visitigon)
-      
-      var extent = vecSource.getExtent();
-      extentOptions = {
-        extent: extent,
-        animate: true
-      }
-    } else {
+    if (allPlaces.length == 1) {
       let box = place.boundingbox
       
       let extent1 = [box[1], box[3]]
@@ -295,8 +303,23 @@ async function addPlace() {
         extent2,
         animate: true
       }
+      fitViewToCoordinates(extentOptions)
+    // } else {
+    } else if (boundsBreached) {
+      let visitigon = createVisitigon(allPlaces)
+      if (visitigonDict.polygon) {
+        vecSource.removeFeature(visitigonDict.polygon)
+      }
+      visitigonDict.polygon = visitigon
+      vecSource.addFeature(visitigon)
+      
+      var extent = vecSource.getExtent();
+      extentOptions = {
+        extent: extent,
+        animate: true
+      }
+      fitViewToCoordinates(extentOptions)
     }
-    fitViewToCoordinates(extentOptions)
   })
 }
 

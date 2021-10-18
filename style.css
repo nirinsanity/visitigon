@@ -127,8 +127,15 @@ input[type="search"]::-webkit-search-cancel-button {
 .panel-info {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  justify-content: stretch;
+  justify-content: space-between;
+}
+
+#version-info {
+  align-self: flex-end;
+  color: gray;
+  font-size: 0.6em;
+  padding: 0.4em;
+  /* justify-self: flex-end; */
 }
 
 #map {
