@@ -1,4 +1,5 @@
 import './style.css';
+import './loader.css';
 import {Map, View} from 'ol';
 import Feature from 'ol/Feature';
 import {Circle, Polygon} from 'ol/geom';
@@ -163,6 +164,14 @@ function checkBoundPlaces(place) {
 }
 
 async function addPlace() {
+  // Hide the keyboard
+  document.activeElement.blur();
+
+  let messageDiv = document.querySelector('#message')
+  messageDiv.style.display = 'none'
+  let loaderDiv = document.querySelector('.lds-ellipsis')
+  loaderDiv.style.display = ''
+
   let resultsDiv = document.querySelector('#search-results')
   resultsDiv.innerHTML = ''
 
@@ -170,12 +179,14 @@ async function addPlace() {
   let data = await searchOSM(searchText)
   console.log(data)
 
+  loaderDiv.style.display = 'none'
+  messageDiv.style.display = ''
+
   data.forEach((place, ind) => {
     if (ind != 0) { return }
     let lat = parseFloat(place.lat)
     let lon = parseFloat(place.lon)
 
-    let messageDiv = document.querySelector('#message')
     if (allPlaces.length) {
       commonWord = commonWords(commonWord, place.display_name)
       console.log(commonWord)

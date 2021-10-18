@@ -116,6 +116,14 @@ input[type="search"]::-webkit-search-cancel-button {
   text-align: center;
 }
 
+#message-container {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  height: 4em;
+  text-align: center;
+}
+
 #map {
   /* position: absolute; */
   grid-column: 2/3;
