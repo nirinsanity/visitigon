@@ -2,7 +2,7 @@ import './style.css';
 import './loader.css';
 import {Map, View} from 'ol';
 import Feature from 'ol/Feature';
-import {Circle, Polygon} from 'ol/geom';
+import {Circle, Point, Polygon} from 'ol/geom';
 import {OSM, Vector as VectorSource} from 'ol/source';
 import {Style, Fill} from 'ol/style';
 import {Tile as TileLayer, Vector as VectorLayer} from 'ol/layer';
@@ -28,9 +28,10 @@ console.log(polygonCoords)
 
 function createCircleFeature(coord) {
   coord = convertCoords(coord)
-  let circleFeature = new Feature({
-    geometry: new Circle(coord, 100000),
-  });
+  // let circleFeature = new Feature({
+  //   geometry: new Circle(coord, 100000),
+  // });
+  let circleFeature = new Feature(new Point(coord));
   return circleFeature
 }
 
@@ -60,14 +61,47 @@ function createVisitigon(placeCos) {
   return polyFeature
 }
 
-// const circleFeature = createCircleFeature([80.1926262, 13.1358286]);
-// const polyFeature = createVisitigon(polygonCoords)
-
 let vecSource = new VectorSource({
   features: [
     // polyFeature,
   ],
 })
+
+    
+// extent1 = [-180, -10]
+// extent2 = [180, 10]
+// const circleFeature1 = createCircleFeature([80,170]);
+// vecSource.addFeature(circleFeature1)
+// const circleFeature2 = createCircleFeature(["6.5531169", "67.9544415"]);
+// vecSource.addFeature(circleFeature2)
+// const polyFeature = createVisitigon(polygonCoords)
+
+function getNewDefaultView() {
+  let defaultView = new View({
+    // center: transform(["35.6745457", "6.5531169"], 'EPSG:4326', 'EPSG:3857'),
+    // center: transform(["67.9544415", "97.395561"], 'EPSG:4326', 'EPSG:3857'),
+    // center: [0, 0],
+    // zoom: 2,
+    center: [0, 4552089.550903365],
+    zoom: 1.9128893362299615,
+  })
+
+  let extent1 = [90, 180]
+  let extent2 = [-80, -180]
+  extent1 = convertCoords(extent1)
+  extent2 = convertCoords(extent2)
+  
+  let extent = [
+    ...extent2,
+    ...extent1
+  ]
+  
+  let padding = 20
+  defaultView.fit(extent, {
+    padding: [padding,padding,padding,padding]
+  })
+  return defaultView
+}
 
 const map = new Map({
   target: 'map',
@@ -79,18 +113,25 @@ const map = new Map({
       source: vecSource,
     }),
   ],
-  view: new View({
-    center: [0, 0],
-    zoom: 2
-  })
+  view: getNewDefaultView()
 });
 
 async function searchOSM(searchText) {
+  toggleLoader(true)
   let endpoint = 'https://nominatim.openstreetmap.org/search'
   let url = endpoint + `/${searchText}?format=json`
-  let resp = await fetch(url)
-  let data = await resp.json()
-  return data
+  try {
+    let resp = await fetch(url)
+    let data = await resp.json()
+    toggleLoader(false)
+    return data
+  } catch {
+    toggleLoader(false)
+    return {
+      status: 'error',
+      message: 'There was an error while searching. Please try again.'
+    }
+  }
 }
 
 let boundPlaces = {}
@@ -163,24 +204,41 @@ function checkBoundPlaces(place) {
   return breached
 }
 
+function toggleLoader(val) {
+  let messageDiv = document.querySelector('#message')
+  let loaderDiv = document.querySelector('.lds-ellipsis')
+  if (typeof val != 'boolean') {
+    val = loaderDiv.style.display == ''
+    val = !val
+  }
+
+  if (val) {
+    loaderDiv.style.display = ''
+    messageDiv.style.display = 'none'
+  } else {
+    loaderDiv.style.display = 'none'
+    messageDiv.style.display = ''
+  }
+}
+
 async function addPlace() {
   // Hide the keyboard
   document.activeElement.blur();
 
   let messageDiv = document.querySelector('#message')
-  messageDiv.style.display = 'none'
-  let loaderDiv = document.querySelector('.lds-ellipsis')
-  loaderDiv.style.display = ''
-
   let resultsDiv = document.querySelector('#search-results')
   resultsDiv.innerHTML = ''
 
   let searchText = document.getElementById('place-search').value
   let data = await searchOSM(searchText)
-  console.log(data)
+  if (data.status) {
+    messageDiv.style.color = `red`
+    messageDiv.innerHTML = data.message
+    return
+  }
 
-  loaderDiv.style.display = 'none'
-  messageDiv.style.display = ''
+  messageDiv.style.color = ''
+  messageDiv.innerHTML = "Enter at least two places you've visited. After entering a place, press Add."
 
   data.forEach((place, ind) => {
     if (ind != 0) { return }
@@ -189,11 +247,12 @@ async function addPlace() {
 
     if (allPlaces.length) {
       commonWord = commonWords(commonWord, place.display_name)
+      let commonWordText = commonWord
       console.log(commonWord)
-      if (!commonWord) {
-        commonWord = 'the world'
+      if (!commonWordText) {
+        commonWordText = 'the world'
       }
-      messageDiv.innerHTML = `Every place you've ever visited in ${commonWord} lies within the blue rectangle.`
+      messageDiv.innerHTML = `Every place you've ever visited in <span style="font-weight: bold">${commonWordText}</span> lies within the blue rectangle.<br><br> Enter more places to expand the rectangle.`
       messageDiv.style.color = `rgb(22, 166, 223)`
     } else {
       commonWord = place.display_name
@@ -209,15 +268,8 @@ async function addPlace() {
     allPlaces.push([lat, lon])
 
     let boundsBreached = checkBoundPlaces(place)
-      
-    let view = map.getView()
-    var extent = vecSource.getExtent();
-    let padding = 20
-    view.fit(extent, {
-      duration: 1000,
-      padding: [padding,padding,padding,padding]
-    })
-
+    
+    let extentOptions = {}
     if (boundsBreached) {
       let visitigon = createVisitigon(allPlaces)
       if (visitigonList.length) {
@@ -226,8 +278,52 @@ async function addPlace() {
       }
       visitigonList.push(visitigon)
       vecSource.addFeature(visitigon)
+      
+      var extent = vecSource.getExtent();
+      extentOptions = {
+        extent: extent,
+        animate: true
+      }
+    } else {
+      let box = place.boundingbox
+      
+      let extent1 = [box[1], box[3]]
+      let extent2 = [box[0], box[2]]
+
+      extentOptions = {
+        extent1,
+        extent2,
+        animate: true
+      }
     }
+    fitViewToCoordinates(extentOptions)
   })
+}
+
+function fitViewToCoordinates(extentOptions) {
+  let extent
+  if (extentOptions.extent) {
+    extent = extentOptions.extent
+  } else {
+    let extent1 = convertCoords(extentOptions.extent1)
+    let extent2 = convertCoords(extentOptions.extent2)
+
+    extent = [
+      ...extent2,
+      ...extent1
+    ]
+  }
+  
+  let padding = 20
+  let view = map.getView()
+  let options = {
+    padding: [padding,padding,padding,padding]
+  }
+  if (extentOptions.animate) {
+    options.duration = 1000
+  }
+  console.log(extent)
+  view.fit(extent, options)
 }
 
 document.getElementById('add-place-btn').onclick = addPlace
@@ -237,3 +333,96 @@ document.getElementById('place-search').addEventListener("keyup", async function
     addPlace()
   }
 });
+
+document.getElementById('export-png').addEventListener('click', async function () {
+  let extent1, extent2
+  if (commonWord) {
+    let data = await searchOSM(commonWord.trim())
+    let place = data[0]
+    let box = place.boundingbox
+    
+    extent1 = [box[1], box[3]]
+    extent2 = [box[0], box[2]]
+
+  } else {
+    // Default coordinates for a global view
+    extent1 = [90, 180]
+    extent2 = [-80, -180]
+  }
+
+  let extentOptions = {
+    extent1,
+    extent2
+  }
+  fitViewToCoordinates(extentOptions)
+
+  map.once('rendercomplete', function () {
+    const mapCanvas = document.createElement('canvas');
+    const size = map.getSize();
+    mapCanvas.width = size[0];
+    mapCanvas.height = size[1];
+    const mapContext = mapCanvas.getContext('2d');
+    Array.prototype.forEach.call(
+      document.querySelectorAll('.ol-layer canvas'),
+      function (canvas) {
+        if (canvas.width > 0) {
+          const opacity = canvas.parentNode.style.opacity;
+          mapContext.globalAlpha = opacity === '' ? 1 : Number(opacity);
+          const transform = canvas.style.transform;
+          // Get the transform parameters from the style's transform matrix
+          const matrix = transform
+            .match(/^matrix\(([^\(]*)\)$/)[1]
+            .split(',')
+            .map(Number);
+          // Apply the transform to the export map context
+          CanvasRenderingContext2D.prototype.setTransform.apply(
+            mapContext,
+            matrix
+          );
+          mapContext.drawImage(canvas, 0, 0);
+        }
+      }
+    );
+    if (navigator.msSaveBlob) {
+      // link download attribute does not work on MS browsers
+      navigator.msSaveBlob(mapCanvas.msToBlob(), 'map.png');
+    } else {
+      let blob = dataURItoBlob(mapCanvas.toDataURL())
+      var file = new File([blob], "picture.jpg", {type: 'image/jpeg'});
+      var filesArray = [file];
+      navigator.share({
+        files: filesArray
+      })
+      // const link = document.createElement('a');
+      // link.download = 'image'
+      // link.href = mapCanvas.toDataURL();
+      // link.click();
+    }
+  });
+  map.renderSync();
+});
+
+function dataURItoBlob(dataURI) {
+  // convert base64 to raw binary data held in a string
+  // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+  var byteString = atob(dataURI.split(',')[1]);
+
+  // separate out the mime component
+  var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0]
+
+  // write the bytes of the string to an ArrayBuffer
+  var ab = new ArrayBuffer(byteString.length);
+
+  // create a view into the buffer
+  var ia = new Uint8Array(ab);
+
+  // set the bytes of the buffer to the correct values
+  for (var i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+  }
+
+  // write the ArrayBuffer to a blob, and you're done
+  var blob = new Blob([ab], {type: mimeString});
+  return blob;
+
+}
