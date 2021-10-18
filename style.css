@@ -67,12 +67,20 @@ input[type="search"]::-webkit-search-cancel-button {
   cursor: pointer;
 }
 
+.btn:hover {
+  background: skyblue;
+}
+
+.btn-share {
+
+}
+
 #bounds {
   margin: 0.5em;
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 10%;
-  align-self: start;
+  align-self: stretch;
 }
 
 .bound {
@@ -108,20 +116,19 @@ input[type="search"]::-webkit-search-cancel-button {
   color: gray;
 }
 
-#message {
-  display: flex;
-  align-items: center;
-  align-self: center;
-  height: 4em;
-  text-align: center;
-}
-
 #message-container {
   display: flex;
   align-items: center;
   align-self: center;
-  height: 4em;
+  min-height: 8em;
   text-align: center;
+}
+
+.panel-info {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
 }
 
 #map {
@@ -135,7 +142,8 @@ input[type="search"]::-webkit-search-cancel-button {
   /* For mobile phones: */
   .container {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr 4fr 1fr;
+    grid-template-rows: 1fr 2fr 1fr;
+    height: 110%;
   }
 
   #map {
