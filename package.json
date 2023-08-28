@@ -7,7 +7,7 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "vite": "^4.1.4"
+    "vite": "^4.4.9"
   },
   "dependencies": {
     "graham_scan": "^1.0.4",
