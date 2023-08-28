@@ -140,8 +140,12 @@ const map = new Map({
 async function searchOSM(searchText) {
   toggleLoader(true)
   let endpoint = 'https://nominatim.openstreetmap.org/search'
-  let url = endpoint + `/${searchText}?format=json`
-  url = encodeURI(url)
+  let params = {
+    q: searchText,
+    format: "jsonv2"
+  }
+  let url = `${endpoint}?${new URLSearchParams(params).toString()}`
+  
   try {
     let resp = await fetch(url)
     let data = await resp.json()
